@@ -27,7 +27,7 @@ public class ExamSubmitRequestDTO {
     @AllArgsConstructor
     public static class AnswerDTO {
         @NotNull private Long questionId;
-        @NotNull private String selected; // "A" | "B" | "C" | "D"
+        @NotNull private String selected;
         @NotNull private Integer position;
     }
 }
