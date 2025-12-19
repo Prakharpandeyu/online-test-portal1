@@ -20,10 +20,10 @@ public class ExamAssignmentResponseDTO {
     private String examDescription;
     private Integer totalQuestions;
     private Integer durationMinutes;
-    private Integer passingPercentage; // 0-100
+    private Integer passingPercentage; 
 
     // Assignment status
-    private String status; // ASSIGNED / IN_PROGRESS / COMPLETED / EXPIRED / 
+    private String status;
     private Integer maxAttempts;
 
     // Attempts tracking
