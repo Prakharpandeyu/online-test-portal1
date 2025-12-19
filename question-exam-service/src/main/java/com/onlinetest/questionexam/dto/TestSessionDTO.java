@@ -17,12 +17,10 @@ public class TestSessionDTO {
     private Long examId;
     private String title;
     private String description;
-
-    // New: per-question seconds and review minutes — used by frontend timer logic
     private Integer perQuestionSeconds;
     private Integer reviewMinutes;
 
     private LocalDateTime startedAt;
-    private LocalDateTime endsAt; // still optional for assignment window
+    private LocalDateTime endsAt; 
     private List<ExamQuestionViewDTO> questions;
 }
