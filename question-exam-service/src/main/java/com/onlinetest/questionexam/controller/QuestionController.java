@@ -19,10 +19,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
-/**
- * REST Controller for Question management operations
- * Handles CRUD operations for questions with company-specific isolation
- */
 @RestController
 @RequestMapping("/api/v1/questions")
 @RequiredArgsConstructor
@@ -157,9 +153,6 @@ public class QuestionController {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * 🔹 Pagination endpoint added below (default size = 5)
-     */
     @GetMapping("/topic/{topicId}/paginated")
     public ResponseEntity<ApiResponseDTO<PaginatedResponseDTO<QuestionResponseDTO>>> getQuestionsByTopicPaginated(
             @PathVariable Long topicId,
