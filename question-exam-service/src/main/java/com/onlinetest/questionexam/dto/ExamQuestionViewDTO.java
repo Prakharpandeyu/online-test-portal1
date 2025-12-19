@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 
 @Data @Builder @NoArgsConstructor @AllArgsConstructor
 public class ExamQuestionViewDTO {
-    private Long id;          // questionId
+    private Long id;          
     private Long topicId;
     private String topicName;
     private String questionText;
