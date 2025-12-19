@@ -19,8 +19,8 @@ public class ExamResponseDTO {
     private Integer totalQuestions;
 
     private Integer durationMinutes;
-    private Integer perQuestionSeconds;   // NEW
-    private Integer reviewMinutes;        // NEW
+    private Integer perQuestionSeconds;   
+    private Integer reviewMinutes;        
 
     private Integer passingPercentage;
     private Integer selectedTopicCount;
