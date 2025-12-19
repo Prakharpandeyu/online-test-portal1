@@ -30,12 +30,9 @@ public class ExamService {
     private final TopicRepository topicRepository;
     private final QuestionRepository questionRepository;
 
-    // Create exam with manual per-topic question selection
     public ExamResponseDTO createExam(ExamCreateRequestDTO req, Long companyId, Long userId, String role) {
 
         log.info("Creating exam '{}' for company {} with topics payload", req.getTitle(), companyId);
-
-        // validations for timers
         if (req.getPerQuestionSeconds() == null || req.getPerQuestionSeconds() <= 0) {
             throw new IllegalArgumentException("Per-question time is required");
         }
@@ -75,8 +72,8 @@ public class ExamService {
         exam.setDescription(req.getDescription());
         exam.setTotalQuestions(totalQuestions);
         exam.setPassingPercentage(req.getPassingPercentage());
-        exam.setPerQuestionSeconds(req.getPerQuestionSeconds()); // NEW
-        exam.setReviewMinutes(req.getReviewMinutes());           // NEW
+        exam.setPerQuestionSeconds(req.getPerQuestionSeconds()); 
+        exam.setReviewMinutes(req.getReviewMinutes());          
         exam.setCreatedBy(userId);
         exam.setCreatedByRole(role);
         Exam saved = examRepository.save(exam);
@@ -146,7 +143,6 @@ public class ExamService {
                 .toList();
     }
 
-    // Update exam details
     public ExamResponseDTO updateExam(Long examId, ExamCreateRequestDTO req, Long companyId, Long userId, String role) {
         Exam exam = examRepository.findById(examId)
                 .orElseThrow(() -> new RuntimeException("Exam not found: " + examId));
@@ -167,7 +163,7 @@ public class ExamService {
         return mapToResponseDTO(exam, null);
     }
 
-    // Delete exam
+
     public void deleteExam(Long examId, Long companyId) {
         Exam exam = examRepository.findById(examId)
                 .orElseThrow(() -> new RuntimeException("Exam not found: " + examId));
@@ -177,8 +173,6 @@ public class ExamService {
         examQuestionRepository.deleteByExamId(examId);
         examRepository.delete(exam);
     }
-
-    // Helper for response mapping
     private ExamResponseDTO mapToResponseDTO(Exam exam, Integer topicCount) {
         return ExamResponseDTO.builder()
                 .id(exam.getId())
