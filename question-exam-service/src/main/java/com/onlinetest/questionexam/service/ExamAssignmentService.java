@@ -34,8 +34,6 @@ public class ExamAssignmentService {
     private final ExamAssignmentRepository examAssignmentRepository;
     private final ExamQuestionRepository examQuestionRepository;
     private final QuestionRepository questionRepository;
-
-    // REQUIRED: Used to fetch last attempt results
     private final ExamAttemptRepository attemptRepository;
 
     private final UserClient userClient;
@@ -135,10 +133,6 @@ public class ExamAssignmentService {
                 .hasPrevious(assignmentPage.hasPrevious())
                 .build();
     }
-
-    /**
-     * UPDATED: Loads last attempt info for frontend display
-     */
     private ExamAssignmentResponseDTO mapToDTO(ExamAssignment a, Exam exam, LocalDateTime now) {
 
         boolean expired = a.getEndTime() != null && now.isAfter(a.getEndTime());
@@ -151,8 +145,6 @@ public class ExamAssignmentService {
         } else {
             finalStatus = a.getStatus();
         }
-
-        // NEW: Fetch last attempt
         Integer lastPercentage = null;
         String lastResult = null;
 
