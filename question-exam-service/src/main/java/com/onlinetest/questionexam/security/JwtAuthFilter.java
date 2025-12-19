@@ -46,7 +46,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
             Long userId = jwtUtil.extractUserId(token);
             Long companyId = jwtUtil.extractCompanyId(token);
-            String rolePlain = jwtUtil.extractRole(token); // SUPER_ADMIN / ADMIN / EMPLOYEE
+            String rolePlain = jwtUtil.extractRole(token);
 
             String roleWithPrefix = rolePlain.startsWith("ROLE_") ? rolePlain : "ROLE_" + rolePlain;
             var authorities = List.of(new SimpleGrantedAuthority(roleWithPrefix));
