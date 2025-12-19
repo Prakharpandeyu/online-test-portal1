@@ -62,7 +62,6 @@ public class ExamSubmissionService {
 
         int attemptsUsed = getAttemptsUsed(a);
 
-        // Build question map
         List<ExamQuestion> eqs = examQuestionRepository.findByExamIdOrderByPositionAsc(exam.getId());
         Map<Long, Integer> questionIdToPosition = new HashMap<>();
         List<Long> qIds = new ArrayList<>(eqs.size());
@@ -126,8 +125,6 @@ public class ExamSubmissionService {
         boolean passed = percentage >= passingThreshold;
 
         int nextAttemptNum = attemptsUsed + 1;
-
-        // Save attempt
         ExamAttempt attempt = new ExamAttempt();
         attempt.setCompanyId(companyId);
         attempt.setExamId(exam.getId());
@@ -148,18 +145,14 @@ public class ExamSubmissionService {
         attemptAnswerRepository.saveAll(persistedAnswers);
 
         setAttemptsUsed(a, nextAttemptNum);
-
-        // 🔥 FINAL RETRY LOGIC (CORRECT)
         if (passed) {
             a.setStatus(STATUS_COMPLETED);
         } else {
 
             if (attemptsUsed == 0) {
-                // First fail → allow one retry
                 a.setMaxAttempts(2);
                 a.setStatus(STATUS_ASSIGNED);
             } else {
-                // Second fail → final
                 a.setStatus(STATUS_COMPLETED);
             }
         }
