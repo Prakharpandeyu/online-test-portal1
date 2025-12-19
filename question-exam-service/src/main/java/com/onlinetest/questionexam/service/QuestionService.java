@@ -166,8 +166,6 @@ public class QuestionService {
         return questionRepository.findByTopicIdAndCompanyIdAndIsActiveTrueOrderByCreatedDateDesc(topicId, companyId)
                 .stream().map(this::mapToDTO).collect(Collectors.toList());
     }
-
-    // 🔹 New pagination service method
     @Transactional(readOnly = true)
     public Page<QuestionResponseDTO> getQuestionsByTopicPaginated(Long topicId, Long companyId, Pageable pageable) {
         return questionRepository
