@@ -3,15 +3,21 @@ package com.onlinetest.questionexam.service;
 import com.onlinetest.questionexam.dto.ExamCreateRequestDTO;
 import com.onlinetest.questionexam.dto.ExamQuestionViewDTO;
 import com.onlinetest.questionexam.dto.ExamResponseDTO;
+import com.onlinetest.questionexam.dto.ExamTopicSummaryDTO;
+import com.onlinetest.questionexam.dto.PaginatedResponseDTO;
 import com.onlinetest.questionexam.entity.Exam;
 import com.onlinetest.questionexam.entity.ExamQuestion;
 import com.onlinetest.questionexam.entity.Question;
+import com.onlinetest.questionexam.entity.Topic;
 import com.onlinetest.questionexam.repository.ExamQuestionRepository;
 import com.onlinetest.questionexam.repository.ExamRepository;
 import com.onlinetest.questionexam.repository.QuestionRepository;
 import com.onlinetest.questionexam.repository.TopicRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,55 +36,71 @@ public class ExamService {
     private final TopicRepository topicRepository;
     private final QuestionRepository questionRepository;
 
-    // Create exam with manual per-topic question selection
+    // =========================
+    // Create Exam
+    // =========================
     public ExamResponseDTO createExam(ExamCreateRequestDTO req, Long companyId, Long userId, String role) {
 
-        log.info("Creating exam '{}' for company {} with topics payload", req.getTitle(), companyId);
-
-        // validations for timers
-        if (req.getPerQuestionSeconds() == null || req.getPerQuestionSeconds() <= 0) {
-            throw new IllegalArgumentException("Per-question time is required");
-        }
-        if (req.getReviewMinutes() == null || req.getReviewMinutes() <= 0) {
-            throw new IllegalArgumentException("Review minutes is required");
-        }
-
         int totalQuestions = 0;
+        List<String> validationErrors = new ArrayList<>();
+
         for (ExamCreateRequestDTO.ExamTopicRequestDTO t : req.getTopics()) {
-            if (t.getTopicId() == null || t.getQuestionsCount() == null || t.getQuestionsCount() <= 0) {
-                throw new IllegalArgumentException("Each topic must include topicId and questionsCount >= 1");
+
+            Topic topic = topicRepository.findByIdAndCompanyId(t.getTopicId(), companyId)
+                    .orElse(null);
+
+            if (topic == null) {
+                validationErrors.add("Topic not found");
+                continue;
             }
 
-            topicRepository.findByIdAndCompanyId(t.getTopicId(), companyId)
-                    .orElseThrow(() -> new RuntimeException("Topic not found in company: " + t.getTopicId()));
+            List<Long> activeIds =
+                    questionRepository.findActiveIdsByCompanyAndTopic(companyId, topic.getId());
 
-            List<Long> activeIds = questionRepository.findActiveIdsByCompanyAndTopic(companyId, t.getTopicId());
             if (activeIds.size() < t.getQuestionsCount()) {
-                throw new RuntimeException("Not enough active questions in topic: " + t.getTopicId());
+                validationErrors.add(
+                        "Topic \"" + topic.getName() + "\" has only "
+                                + activeIds.size() + " active questions, but "
+                                + t.getQuestionsCount() + " were requested"
+                );
             }
+
             totalQuestions += t.getQuestionsCount();
+        }
+
+        if (!validationErrors.isEmpty()) {
+            throw new RuntimeException(
+                    "Some selected topics do not have enough active questions. Please review topic selection."
+            );
         }
 
         SecureRandom rnd = new SecureRandom();
         List<Long> chosen = new ArrayList<>(totalQuestions);
 
         for (ExamCreateRequestDTO.ExamTopicRequestDTO t : req.getTopics()) {
-            List<Long> ids = questionRepository.findActiveIdsByCompanyAndTopic(companyId, t.getTopicId());
+            List<Long> ids =
+                    questionRepository.findActiveIdsByCompanyAndTopic(companyId, t.getTopicId());
             Collections.shuffle(ids, rnd);
             chosen.addAll(ids.subList(0, t.getQuestionsCount()));
         }
 
         Collections.shuffle(chosen, rnd);
+
         Exam exam = new Exam();
         exam.setCompanyId(companyId);
         exam.setTitle(req.getTitle());
         exam.setDescription(req.getDescription());
         exam.setTotalQuestions(totalQuestions);
-        exam.setPassingPercentage(req.getPassingPercentage());
-        exam.setPerQuestionSeconds(req.getPerQuestionSeconds()); // NEW
-        exam.setReviewMinutes(req.getReviewMinutes());           // NEW
+
+        if (req.getPassingPercentage() != null) {
+            exam.setPassingPercentage(req.getPassingPercentage());
+        }
+
+        exam.setPerQuestionSeconds(req.getPerQuestionSeconds());
+        exam.setReviewMinutes(req.getReviewMinutes());
         exam.setCreatedBy(userId);
         exam.setCreatedByRole(role);
+
         Exam saved = examRepository.save(exam);
 
         int pos = 1;
@@ -90,96 +112,208 @@ public class ExamService {
             examQuestionRepository.save(eq);
         }
 
-        return mapToResponseDTO(saved, req.getTopics().size());
+        List<ExamTopicSummaryDTO> topics = deriveSelectedTopics(saved.getId());
+        return mapToResponseDTO(saved, topics.size(), topics);
     }
 
-    // fetch exam details for the same company
+    // =========================
+    // Get Exam Details
+    // =========================
     @Transactional(readOnly = true)
     public ExamResponseDTO getExamById(Long examId, Long companyId) {
+
         Exam exam = examRepository.findById(examId)
                 .orElseThrow(() -> new RuntimeException("Exam not found: " + examId));
+
         if (!exam.getCompanyId().equals(companyId)) {
             throw new RuntimeException("Exam not found: " + examId);
         }
 
-        int topicCount = exam.getTotalQuestions() > 0 ? 1 : 0;
-
-        return mapToResponseDTO(exam, topicCount);
+        List<ExamTopicSummaryDTO> topics = deriveSelectedTopics(examId);
+        return mapToResponseDTO(exam, topics.size(), topics);
     }
 
-    // deliver exam questions
+    // =========================
+    // Get Exam Questions (For Delivery)
+    // =========================
     @Transactional(readOnly = true)
     public List<ExamQuestionViewDTO> getExamQuestionsForDelivery(Long examId, Long companyId) {
+
         Exam exam = examRepository.findById(examId)
                 .orElseThrow(() -> new RuntimeException("Exam not found: " + examId));
+
         if (!exam.getCompanyId().equals(companyId)) {
             throw new RuntimeException("Exam not found: " + examId);
         }
 
-        var eqs = examQuestionRepository.findByExamIdOrderByPositionAsc(examId);
-        var qIds = eqs.stream().map(ExamQuestion::getQuestionId).toList();
-        List<Question> questions = questionRepository.findAllById(qIds);
+        List<ExamQuestion> examQuestions =
+                examQuestionRepository.findByExamIdOrderByPositionAsc(examId);
 
-        return eqs.stream().map(eq -> {
-            Question q = questions.stream()
-                    .filter(qq -> qq.getId().equals(eq.getQuestionId()))
-                    .findFirst().orElse(null);
-            if (q == null) return null;
-            return ExamQuestionViewDTO.builder()
-                    .id(q.getId())
-                    .topicId(q.getTopicId())
-                    .topicName(q.getTopic() != null ? q.getTopic().getName() : null)
-                    .questionText(q.getQuestionText())
-                    .optionA(q.getOptionA())
-                    .optionB(q.getOptionB())
-                    .optionC(q.getOptionC())
-                    .optionD(q.getOptionD())
-                    .build();
-        }).filter(Objects::nonNull).toList();
+        List<Question> questions =
+                questionRepository.findAllById(
+                        examQuestions.stream()
+                                .map(ExamQuestion::getQuestionId)
+                                .toList()
+                );
+
+        return examQuestions.stream()
+                .map(eq -> {
+                    Question q = questions.stream()
+                            .filter(qq -> qq.getId().equals(eq.getQuestionId()))
+                            .findFirst()
+                            .orElse(null);
+
+                    if (q == null) return null;
+
+                    return ExamQuestionViewDTO.builder()
+                            .id(q.getId())
+                            .topicId(q.getTopicId())
+                            .topicName(q.getTopic() != null ? q.getTopic().getName() : null)
+                            .questionText(q.getQuestionText())
+                            .optionA(q.getOptionA())
+                            .optionB(q.getOptionB())
+                            .optionC(q.getOptionC())
+                            .optionD(q.getOptionD())
+                            .build();
+                })
+                .filter(Objects::nonNull)
+                .toList();
     }
 
+    // =========================
+    // List Exams
+    // =========================
     @Transactional(readOnly = true)
     public List<ExamResponseDTO> listCompanyExams(Long companyId) {
         return examRepository.findAll().stream()
                 .filter(e -> e.getCompanyId().equals(companyId))
-                .map(e -> mapToResponseDTO(e, null))
+                .map(e -> {
+                    List<ExamTopicSummaryDTO> topics = deriveSelectedTopics(e.getId());
+                    return mapToResponseDTO(e, topics.size(), topics);
+                })
                 .toList();
     }
 
-    // Update exam details
-    public ExamResponseDTO updateExam(Long examId, ExamCreateRequestDTO req, Long companyId, Long userId, String role) {
+    // =========================
+    // Search + Pagination
+    // =========================
+    @Transactional(readOnly = true)
+    public PaginatedResponseDTO<ExamResponseDTO> searchExams(Long companyId, String search, int page) {
+
+        int pageSize = 5;
+        Pageable pageable = PageRequest.of(page, pageSize);
+
+        Page<Exam> examPage;
+
+        if (search != null && !search.trim().isEmpty()) {
+            examPage = examRepository.findByCompanyIdAndTitleContainingIgnoreCase(
+                    companyId,
+                    search.trim(),
+                    pageable
+            );
+        } else {
+            examPage = examRepository.findByCompanyId(companyId, pageable);
+        }
+
+        List<ExamResponseDTO> content = examPage.getContent().stream()
+                .map(e -> {
+                    List<ExamTopicSummaryDTO> topics = deriveSelectedTopics(e.getId());
+                    return mapToResponseDTO(e, topics.size(), topics);
+                })
+                .toList();
+
+        return PaginatedResponseDTO.<ExamResponseDTO>builder()
+                .content(content)
+                .currentPage(examPage.getNumber())
+                .pageSize(pageSize)
+                .totalPages(examPage.getTotalPages())
+                .totalElements(examPage.getTotalElements())
+                .hasNext(examPage.hasNext())
+                .hasPrevious(examPage.hasPrevious())
+                .build();
+    }
+
+    // =========================
+    // Update Exam
+    // =========================
+    public ExamResponseDTO updateExam(Long examId, ExamCreateRequestDTO req,
+                                      Long companyId, Long userId, String role) {
+
         Exam exam = examRepository.findById(examId)
                 .orElseThrow(() -> new RuntimeException("Exam not found: " + examId));
+
         if (!exam.getCompanyId().equals(companyId)) {
             throw new RuntimeException("Exam not found: " + examId);
         }
 
         exam.setTitle(req.getTitle());
         exam.setDescription(req.getDescription());
-        exam.setPassingPercentage(req.getPassingPercentage());
-        exam.setPerQuestionSeconds(req.getPerQuestionSeconds()); // NEW
-        exam.setReviewMinutes(req.getReviewMinutes());           // NEW
+
+        if (req.getPassingPercentage() != null) {
+            exam.setPassingPercentage(req.getPassingPercentage());
+        }
+
+        exam.setPerQuestionSeconds(req.getPerQuestionSeconds());
+        exam.setReviewMinutes(req.getReviewMinutes());
         exam.setUpdatedBy(userId);
         exam.setUpdatedByRole(role);
 
         examRepository.save(exam);
 
-        return mapToResponseDTO(exam, null);
+        List<ExamTopicSummaryDTO> topics = deriveSelectedTopics(examId);
+        return mapToResponseDTO(exam, topics.size(), topics);
     }
 
-    // Delete exam
+    // =========================
+    // Delete Exam
+    // =========================
     public void deleteExam(Long examId, Long companyId) {
+
         Exam exam = examRepository.findById(examId)
                 .orElseThrow(() -> new RuntimeException("Exam not found: " + examId));
-        if (!exam.getCompanyId().equals(companyId))
+
+        if (!exam.getCompanyId().equals(companyId)) {
             throw new RuntimeException("Exam not found: " + examId);
+        }
 
         examQuestionRepository.deleteByExamId(examId);
         examRepository.delete(exam);
     }
 
-    // Helper for response mapping
-    private ExamResponseDTO mapToResponseDTO(Exam exam, Integer topicCount) {
+    // =========================
+    // Helpers
+    // =========================
+    private List<ExamTopicSummaryDTO> deriveSelectedTopics(Long examId) {
+
+        List<ExamQuestion> examQuestions =
+                examQuestionRepository.findByExamIdOrderByPositionAsc(examId);
+
+        List<Question> questions = questionRepository.findAllById(
+                examQuestions.stream()
+                        .map(ExamQuestion::getQuestionId)
+                        .toList()
+        );
+
+        return questions.stream()
+                .collect(Collectors.groupingBy(Question::getTopicId))
+                .entrySet()
+                .stream()
+                .map(entry -> {
+                    Question q = entry.getValue().get(0);
+                    return new ExamTopicSummaryDTO(
+                            entry.getKey(),
+                            q.getTopic() != null ? q.getTopic().getName() : "Unknown",
+                            entry.getValue().size()
+                    );
+                })
+                .toList();
+    }
+
+    private ExamResponseDTO mapToResponseDTO(
+            Exam exam,
+            Integer topicCount,
+            List<ExamTopicSummaryDTO> selectedTopics
+    ) {
         return ExamResponseDTO.builder()
                 .id(exam.getId())
                 .companyId(exam.getCompanyId())
@@ -189,9 +323,12 @@ public class ExamService {
                 .perQuestionSeconds(exam.getPerQuestionSeconds())
                 .reviewMinutes(exam.getReviewMinutes())
                 .passingPercentage(exam.getPassingPercentage())
-                .selectedTopicCount(topicCount != null ? topicCount : null)
+                .selectedTopicCount(topicCount)
+                .selectedTopics(selectedTopics)
                 .createdDate(exam.getCreatedDate())
                 .updatedDate(exam.getUpdatedDate())
+                .updatedBy(exam.getUpdatedBy())
+                .updatedByRole(exam.getUpdatedByRole())
                 .build();
     }
 }

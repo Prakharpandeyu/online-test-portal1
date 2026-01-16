@@ -39,6 +39,56 @@ public class UserManagementController {
         ));
     }
 
+    // =================================================
+    // ENABLE / DISABLE USER (NEW FUNCTIONALITY)
+    // =================================================
+
+    @PatchMapping("/{targetUserId}/disable")
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
+    public ResponseEntity<?> disableUser(@PathVariable Long targetUserId,
+                                         Authentication auth) {
+
+        Long callerUserId = extractUserId(auth);
+        Long callerCompanyId = extractCompanyId(auth);
+        String callerRole = extractRole(auth);
+
+        userService.disableUser(
+                targetUserId,
+                callerUserId,
+                callerCompanyId,
+                callerRole
+        );
+
+        return ResponseEntity.ok(Map.of(
+                "message", "User disabled successfully",
+                "userId", targetUserId
+        ));
+    }
+
+    @PatchMapping("/{targetUserId}/enable")
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
+    public ResponseEntity<?> enableUser(@PathVariable Long targetUserId,
+                                        Authentication auth) {
+
+        Long callerCompanyId = extractCompanyId(auth);
+        String callerRole = extractRole(auth);
+
+        userService.enableUser(
+                targetUserId,
+                callerCompanyId,
+                callerRole
+        );
+
+        return ResponseEntity.ok(Map.of(
+                "message", "User enabled successfully",
+                "userId", targetUserId
+        ));
+    }
+
+    // =================================================
+    // HELPERS (UNCHANGED)
+    // =================================================
+
     private Long extractUserId(Authentication auth) {
         return Long.valueOf(((Map<String, Object>) auth.getDetails()).get("userId").toString());
     }

@@ -44,6 +44,9 @@ public class ExamAssignmentService {
     private static final String STATUS_IN_PROGRESS = "IN_PROGRESS";
     private static final String STATUS_COMPLETED = "COMPLETED";
 
+    // =====================================================
+    // EXISTING: Assign exam
+    // =====================================================
     public List<ExamAssignmentResponseDTO> assignExam(
             ExamAssignRequestDTO req,
             Long companyId,
@@ -96,6 +99,9 @@ public class ExamAssignmentService {
         return responses;
     }
 
+    // =====================================================
+    // EXISTING: Default assignment list (createdDate based)
+    // =====================================================
     @Transactional(readOnly = true)
     public PaginatedResponseDTO<ExamAssignmentResponseDTO> listMyAssignmentsPaginated(
             Long companyId,
@@ -136,6 +142,50 @@ public class ExamAssignmentService {
                 .build();
     }
 
+    //  NEW: Timeline-based assignment list (date-time aware)
+    @Transactional(readOnly = true)
+    public PaginatedResponseDTO<ExamAssignmentResponseDTO> listMyAssignmentsTimeline(
+            Long companyId,
+            Long employeeId,
+            int page,
+            int size
+    ) {
+        Pageable pageable = PageRequest.of(page, size);
+        LocalDateTime now = LocalDateTime.now();
+
+        Page<ExamAssignment> assignmentPage =
+                examAssignmentRepository.findAssignmentsForTimeline(
+                        companyId,
+                        employeeId,
+                        now,
+                        pageable
+                );
+
+        Set<Long> examIds = assignmentPage.getContent()
+                .stream()
+                .map(ExamAssignment::getExamId)
+                .collect(Collectors.toSet());
+
+        Map<Long, Exam> examMap = examRepository.findAllById(examIds)
+                .stream()
+                .collect(Collectors.toMap(Exam::getId, e -> e));
+
+        List<ExamAssignmentResponseDTO> dtoList = assignmentPage.getContent()
+                .stream()
+                .map(a -> mapToDTO(a, examMap.get(a.getExamId()), now))
+                .toList();
+
+        return PaginatedResponseDTO.<ExamAssignmentResponseDTO>builder()
+                .content(dtoList)
+                .currentPage(assignmentPage.getNumber())
+                .pageSize(assignmentPage.getSize())
+                .totalPages(assignmentPage.getTotalPages())
+                .totalElements(assignmentPage.getTotalElements())
+                .hasNext(assignmentPage.hasNext())
+                .hasPrevious(assignmentPage.hasPrevious())
+                .build();
+    }
+
     /**
      * UPDATED: Loads last attempt info for frontend display
      */
@@ -152,7 +202,6 @@ public class ExamAssignmentService {
             finalStatus = a.getStatus();
         }
 
-        // NEW: Fetch last attempt
         Integer lastPercentage = null;
         String lastResult = null;
 
@@ -177,12 +226,12 @@ public class ExamAssignmentService {
                 .statusMessage(getStatusMessage(a, now))
                 .attemptsUsed(a.getAttemptsUsed())
                 .maxAttempts(a.getMaxAttempts())
-                // NEW FIELDS
                 .lastPercentage(lastPercentage)
                 .lastResult(lastResult)
                 .build();
     }
 
+    // EXISTING: Start assigned exam
     @Transactional
     public TestSessionDTO startAssignedExam(Long assignmentId, Long companyId, Long employeeId) {
         ExamAssignment a = examAssignmentRepository.findById(assignmentId)

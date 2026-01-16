@@ -65,7 +65,6 @@ public class CompanyService {
         user.setEnabled(true);
         user.setCompany(company);
         user.setRoles(Set.of(superRole));
-
         try {
             user = userRepository.save(user);
         } catch (DataIntegrityViolationException e) {
@@ -102,7 +101,6 @@ public class CompanyService {
                 throw new IllegalArgumentException("GST Number already in use");
             }
         });
-
         company.setName(newName);
         company.setGstNumber(newGst);
         companyRepository.save(company);

@@ -12,5 +12,4 @@ public class QuestionAndExamServiceApplication {
 
         SpringApplication.run(QuestionAndExamServiceApplication.class, args);
 	}
-
 }

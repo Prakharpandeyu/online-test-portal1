@@ -33,12 +33,17 @@ public class QuestionService {
     private final QuestionRepository questionRepository;
     private final TopicRepository topicRepository;
 
-    public QuestionResponseDTO createQuestion(QuestionRequestDTO requestDTO, Long companyId, Long userId, String role) {
+    public QuestionResponseDTO createQuestion(
+            QuestionRequestDTO requestDTO,
+            Long companyId,
+            Long userId,
+            String role) {
 
         Topic topic = topicRepository.findByIdAndCompanyId(requestDTO.getTopicId(), companyId)
                 .orElseThrow(() -> new RuntimeException("Topic not found: " + requestDTO.getTopicId()));
 
-        if (questionRepository.existsByCompanyIdAndQuestionTextIgnoreCase(companyId, requestDTO.getQuestionText())) {
+        if (questionRepository.existsByCompanyIdAndQuestionTextIgnoreCase(
+                companyId, requestDTO.getQuestionText())) {
             throw new RuntimeException("Question already exists");
         }
 
@@ -59,7 +64,11 @@ public class QuestionService {
         return mapToDTO(saved, topic.getName());
     }
 
-    public List<QuestionResponseDTO> uploadQuestionsCsv(MultipartFile file, Long companyId, Long userId, String role) {
+    public List<QuestionResponseDTO> uploadQuestionsCsv(
+            MultipartFile file,
+            Long companyId,
+            Long userId,
+            String role) {
 
         if (file == null || file.isEmpty()) {
             throw new RuntimeException("Empty file");
@@ -70,7 +79,8 @@ public class QuestionService {
 
         List<QuestionResponseDTO> results = new ArrayList<>();
 
-        try (Reader in = new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8)) {
+        try (Reader in = new InputStreamReader(
+                file.getInputStream(), StandardCharsets.UTF_8)) {
 
             CSVParser parser = CSVFormat.DEFAULT
                     .withFirstRecordAsHeader()
@@ -84,7 +94,9 @@ public class QuestionService {
                 cleanedHeaders.put(cleaned, val);
             });
 
-            parser = CSVParser.parse(file.getInputStream(), StandardCharsets.UTF_8,
+            parser = CSVParser.parse(
+                    file.getInputStream(),
+                    StandardCharsets.UTF_8,
                     CSVFormat.DEFAULT
                             .withHeader(cleanedHeaders.keySet().toArray(new String[0]))
                             .withSkipHeaderRecord()
@@ -92,53 +104,63 @@ public class QuestionService {
                             .withTrim(true)
             );
 
-            requireHeaders(cleanedHeaders,
-                    "topicName", "questionText", "optionA", "optionB", "optionC", "optionD", "correctAnswer");
+            requireHeaders(
+                    cleanedHeaders,
+                    "topicName",
+                    "questionText",
+                    "optionA",
+                    "optionB",
+                    "optionC",
+                    "optionD",
+                    "correctAnswer"
+            );
 
             for (CSVRecord rec : parser) {
-                try {
-                    String topicName = nonEmpty(rec.get("topicName"), "topicName");
-                    String questionText = nonEmpty(rec.get("questionText"), "questionText");
-                    String optionA = nonEmpty(rec.get("optionA"), "optionA");
-                    String optionB = nonEmpty(rec.get("optionB"), "optionB");
-                    String optionC = nonEmpty(rec.get("optionC"), "optionC");
-                    String optionD = nonEmpty(rec.get("optionD"), "optionD");
 
-                    String correctVal = nonEmpty(rec.get("correctAnswer"), "correctAnswer")
-                            .trim().toUpperCase();
+                String topicName = nonEmpty(rec.get("topicName"), "topicName");
+                String questionText = nonEmpty(rec.get("questionText"), "questionText");
+                String optionA = nonEmpty(rec.get("optionA"), "optionA");
+                String optionB = nonEmpty(rec.get("optionB"), "optionB");
+                String optionC = nonEmpty(rec.get("optionC"), "optionC");
+                String optionD = nonEmpty(rec.get("optionD"), "optionD");
 
-                    Question.CorrectAnswer correctAnswer =
-                            Question.CorrectAnswer.valueOf(correctVal);
+                String correctVal = nonEmpty(rec.get("correctAnswer"), "correctAnswer")
+                        .trim()
+                        .toUpperCase();
 
-                    Topic topic = topicRepository.findByNameIgnoreCaseAndCompanyId(topicName, companyId)
-                            .orElseThrow(() ->
-                                    new RuntimeException("Topic not found for company: " + topicName)
-                            );
+                Question.CorrectAnswer correctAnswer =
+                        Question.CorrectAnswer.valueOf(correctVal);
 
-                    if (questionRepository.existsByCompanyIdAndQuestionTextIgnoreCase(companyId, questionText)) {
-                        log.warn("Skipping duplicate: {}", questionText);
-                        continue;
-                    }
+                Topic topic = topicRepository
+                        .findByNameIgnoreCaseAndCompanyId(topicName, companyId)
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "CSV error at row " + rec.getRecordNumber()
+                                                + ": Topic '" + topicName + "' does not exist"
+                                )
+                        );
 
-                    Question q = new Question();
-                    q.setCompanyId(companyId);
-                    q.setTopicId(topic.getId());
-                    q.setQuestionText(questionText);
-                    q.setOptionA(optionA);
-                    q.setOptionB(optionB);
-                    q.setOptionC(optionC);
-                    q.setOptionD(optionD);
-                    q.setCorrectAnswer(correctAnswer);
-                    q.setCreatedBy(userId);
-                    q.setCreatedByRole(role);
-                    q.setIsActive(true);
-
-                    Question saved = questionRepository.save(q);
-                    results.add(mapToDTO(saved, topic.getName()));
-
-                } catch (Exception ex) {
-                    log.error("CSV row {} error: {}", rec.getRecordNumber(), ex.getMessage());
+                if (questionRepository.existsByCompanyIdAndQuestionTextIgnoreCase(
+                        companyId, questionText)) {
+                    log.warn("Skipping duplicate question: {}", questionText);
+                    continue;
                 }
+
+                Question q = new Question();
+                q.setCompanyId(companyId);
+                q.setTopicId(topic.getId());
+                q.setQuestionText(questionText);
+                q.setOptionA(optionA);
+                q.setOptionB(optionB);
+                q.setOptionC(optionC);
+                q.setOptionD(optionD);
+                q.setCorrectAnswer(correctAnswer);
+                q.setCreatedBy(userId);
+                q.setCreatedByRole(role);
+                q.setIsActive(true);
+
+                Question saved = questionRepository.save(q);
+                results.add(mapToDTO(saved, topic.getName()));
             }
 
         } catch (IOException e) {
@@ -150,8 +172,11 @@ public class QuestionService {
 
     @Transactional(readOnly = true)
     public List<QuestionResponseDTO> getAllQuestions(Long companyId) {
-        return questionRepository.findByCompanyIdAndIsActiveTrueOrderByCreatedDateDesc(companyId)
-                .stream().map(this::mapToDTO).collect(Collectors.toList());
+        return questionRepository
+                .findByCompanyIdAndIsActiveTrueOrderByCreatedDateDesc(companyId)
+                .stream()
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
@@ -163,24 +188,36 @@ public class QuestionService {
 
     @Transactional(readOnly = true)
     public List<QuestionResponseDTO> getQuestionsByTopic(Long topicId, Long companyId) {
-        return questionRepository.findByTopicIdAndCompanyIdAndIsActiveTrueOrderByCreatedDateDesc(topicId, companyId)
-                .stream().map(this::mapToDTO).collect(Collectors.toList());
+        return questionRepository
+                .findByTopicIdAndCompanyIdAndIsActiveTrueOrderByCreatedDateDesc(
+                        topicId, companyId)
+                .stream()
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
     }
 
-    // 🔹 New pagination service method
     @Transactional(readOnly = true)
-    public Page<QuestionResponseDTO> getQuestionsByTopicPaginated(Long topicId, Long companyId, Pageable pageable) {
+    public Page<QuestionResponseDTO> getQuestionsByTopicPaginated(
+            Long topicId,
+            Long companyId,
+            Pageable pageable) {
+
         return questionRepository
-                .findByTopicIdAndCompanyIdAndIsActiveTrueOrderByCreatedDateDesc(topicId, companyId, pageable)
+                .findByTopicIdAndCompanyIdAndIsActiveTrueOrderByCreatedDateDesc(
+                        topicId, companyId, pageable)
                 .map(this::mapToDTO);
     }
 
-    public QuestionResponseDTO updateQuestion(Long questionId, QuestionRequestDTO requestDTO, Long companyId) {
+    public QuestionResponseDTO updateQuestion(
+            Long questionId,
+            QuestionRequestDTO requestDTO,
+            Long companyId) {
 
         Question q = questionRepository.findByIdAndCompanyId(questionId, companyId)
                 .orElseThrow(() -> new RuntimeException("Question not found"));
 
-        Topic topic = topicRepository.findByIdAndCompanyId(requestDTO.getTopicId(), companyId)
+        Topic topic = topicRepository.findByIdAndCompanyId(
+                        requestDTO.getTopicId(), companyId)
                 .orElseThrow(() -> new RuntimeException("Topic not found"));
 
         q.setTopicId(topic.getId());
@@ -223,8 +260,8 @@ public class QuestionService {
 
     private QuestionResponseDTO mapToDTO(Question q) {
         String topicName = topicRepository.findById(q.getTopicId())
-                .map(Topic::getName).orElse("Unknown");
-
+                .map(Topic::getName)
+                .orElse("Unknown");
         return mapToDTO(q, topicName);
     }
 

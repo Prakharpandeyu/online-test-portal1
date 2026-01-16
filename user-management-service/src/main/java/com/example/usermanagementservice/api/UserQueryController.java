@@ -81,6 +81,9 @@ public class UserQueryController {
 
         List<UserSummaryDTO> dtos = userRepository.findByCompany_Id(companyId)
                 .stream()
+                // 1. FILTER: Only allow enabled users
+                .filter(u -> u.isEnabled())
+                // 2. FILTER: Only allow EMPLOYEES
                 .filter(u -> u.getRoles().stream()
                         .anyMatch(r -> r.getName().equals("ROLE_EMPLOYEE")))
                 .map(this::toSummary)
@@ -147,7 +150,8 @@ public class UserQueryController {
                 u.getCompanyId(),
                 u.getRoles().stream().map(Role::getName).toList(),
                 u.getEmail(),
-                u.getName()
+                u.getName(),
+                u.isEnabled()
         );
     }
 
