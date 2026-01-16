@@ -10,7 +10,7 @@ spring:
       enabled: false
 
     gateway:
-      # 🔴 REQUIRED: forward Authorization header to downstream services
+      # REQUIRED: forward Authorization header to downstream services
       forwarded-headers:
         enabled: true
 
@@ -42,7 +42,7 @@ spring:
               /api/internal/users/**,
               /api/profile/**
           filters:
-            # ❗ DO NOT remove Authorization
+            #  DO NOT remove Authorization
             - RemoveRequestHeader=Cookie
 
         # -------------------------
@@ -55,7 +55,9 @@ spring:
               /api/v1/exam-assignments/**,
               /api/v1/questions/**,
               /api/v1/topics/**,
-              /api/v1/employees/**
+              /api/v1/employees/**,
+              /api/v1/admin/dashboard/**,
+              /api/v1/employee/dashboard/**
           filters:
             - RemoveRequestHeader=Cookie
 

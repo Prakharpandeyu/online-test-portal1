@@ -20,10 +20,10 @@ public class ExamAttemptAnswer {
     @Column(nullable = false) private Long questionId;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 1)
-    private Question.CorrectAnswer selected; // A/B/C/D
+    @Column(nullable = true, length = 1)
+    private Question.CorrectAnswer selected;
 
     @Column(nullable = false) private Boolean isCorrect;
 
-    @Column(nullable = false) private Integer position; 
+    @Column(nullable = false) private Integer position;
 }

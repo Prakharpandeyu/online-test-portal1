@@ -1,6 +1,7 @@
 package com.onlinetest.questionexam.service;
 
 import com.onlinetest.questionexam.dto.ExamResultDTO;
+import com.onlinetest.questionexam.dto.ExamScoreDistributionDTO;
 import com.onlinetest.questionexam.dto.ExamSubmitRequestDTO;
 import com.onlinetest.questionexam.entity.*;
 import com.onlinetest.questionexam.repository.*;
@@ -31,6 +32,35 @@ public class ExamSubmissionService {
     private static final String STATUS_COMPLETED = "COMPLETED";
     private static final String STATUS_ASSIGNED = "ASSIGNED";
 
+    // ===============================
+    // Employee score distribution
+    // ===============================
+    @Transactional(readOnly = true)
+    public ExamScoreDistributionDTO getEmployeeScoreDistribution(Long companyId, Long employeeId) {
+
+        long scoreBelow60 =
+                attemptRepository.countLatestAttemptsByPercentageRange(companyId, employeeId, 0, 59);
+
+        long score60to75 =
+                attemptRepository.countLatestAttemptsByPercentageRange(companyId, employeeId, 60, 74);
+
+        long score75to85 =
+                attemptRepository.countLatestAttemptsByPercentageRange(companyId, employeeId, 75, 84);
+
+        long score85to100 =
+                attemptRepository.countLatestAttemptsByPercentageRange(companyId, employeeId, 85, 100);
+
+        return ExamScoreDistributionDTO.builder()
+                .scoreBelow60(scoreBelow60)
+                .score60to75(score60to75)
+                .score75to85(score75to85)
+                .score85to100(score85to100)
+                .build();
+    }
+
+    // ===============================
+    // Submission logic
+    // ===============================
     public ExamResultDTO submitFinalAnswers(Long companyId, Long employeeId, ExamSubmitRequestDTO req) {
 
         ExamAssignment a = assignmentRepository.findById(req.getAssignmentId())
@@ -60,7 +90,7 @@ public class ExamSubmissionService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Assignment window ended");
         }
 
-        int attemptsUsed = getAttemptsUsed(a);
+        int attemptsUsed = (a.getAttemptsUsed() == null) ? 0 : a.getAttemptsUsed();
 
         List<ExamQuestion> eqs = examQuestionRepository.findByExamIdOrderByPositionAsc(exam.getId());
         Map<Long, Integer> questionIdToPosition = new HashMap<>();
@@ -148,7 +178,6 @@ public class ExamSubmissionService {
         if (passed) {
             a.setStatus(STATUS_COMPLETED);
         } else {
-
             if (attemptsUsed == 0) {
                 a.setMaxAttempts(2);
                 a.setStatus(STATUS_ASSIGNED);
@@ -176,23 +205,5 @@ public class ExamSubmissionService {
                 .submittedAt(savedAttempt.getCreatedDate())
                 .questions(List.of())
                 .build();
-    }
-
-    private int getAttemptsUsed(ExamAssignment a) {
-        try {
-            var f = a.getClass().getDeclaredField("attemptsUsed");
-            f.setAccessible(true);
-            Object v = f.get(a);
-            if (v instanceof Integer i) return i;
-        } catch (Exception ignored) {}
-        return (int) attemptRepository.countByAssignmentId(a.getId());
-    }
-
-    private void setAttemptsUsed(ExamAssignment a, int used) {
-        try {
-            var f = a.getClass().getDeclaredField("attemptsUsed");
-            f.setAccessible(true);
-            f.set(a, used);
-        } catch (Exception ignored) {}
     }
 }

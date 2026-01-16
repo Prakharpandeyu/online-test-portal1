@@ -23,7 +23,7 @@ public class ExamAssignmentResponseDTO {
     private Integer passingPercentage; 
 
     // Assignment status
-    private String status;
+    private String status; // ASSIGNED / IN_PROGRESS / COMPLETED / EXPIRED
     private Integer maxAttempts;
 
     // Attempts tracking

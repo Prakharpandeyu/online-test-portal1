@@ -123,7 +123,6 @@ public class UserService {
                     r.getName().equals("ROLE_ADMIN") ||
                             r.getName().equals("ROLE_SUPER_ADMIN")
             );
-
             if (higherRole) {
                 throw new IllegalArgumentException("Admins cannot edit admins or super admins");
             }
@@ -201,9 +200,74 @@ public class UserService {
                 throw new IllegalArgumentException("Admins cannot reset password of admins or super admins");
             }
         }
-
         // SUPER ADMIN can reset anyone in their company
         target.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(target);
+    }
+
+    // =================================================
+    // ENABLE / DISABLE USER (NEW FUNCTIONALITY)
+    // =================================================
+
+    @Transactional
+    public void disableUser(Long targetUserId,
+                            Long callerUserId,
+                            Long callerCompanyId,
+                            String callerRole) {
+
+        User target = userRepository.findById(targetUserId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        // Cannot disable yourself
+        if (target.getId().equals(callerUserId)) {
+            throw new IllegalArgumentException("You cannot disable yourself");
+        }
+
+        // Must belong to same company
+        if (!target.getCompanyId().equals(callerCompanyId)) {
+            throw new IllegalArgumentException("You cannot manage users from another company");
+        }
+
+        // ADMIN restrictions
+        if (callerRole.equals("ADMIN")) {
+            boolean restricted = target.getRoles().stream().anyMatch(r ->
+                    r.getName().equals("ROLE_ADMIN") ||
+                            r.getName().equals("ROLE_SUPER_ADMIN")
+            );
+            if (restricted) {
+                throw new IllegalArgumentException("Admins can only disable employees");
+            }
+        }
+
+        target.setEnabled(false);
+        userRepository.save(target);
+    }
+
+    @Transactional
+    public void enableUser(Long targetUserId,
+                           Long callerCompanyId,
+                           String callerRole) {
+
+        User target = userRepository.findById(targetUserId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        // Must belong to same company
+        if (!target.getCompanyId().equals(callerCompanyId)) {
+            throw new IllegalArgumentException("You cannot manage users from another company");
+        }
+
+        // ADMIN restrictions
+        if (callerRole.equals("ADMIN")) {
+            boolean restricted = target.getRoles().stream().anyMatch(r ->
+                    r.getName().equals("ROLE_ADMIN") ||
+                            r.getName().equals("ROLE_SUPER_ADMIN")
+            );
+            if (restricted) {
+                throw new IllegalArgumentException("Admins can only enable employees");
+            }
+        }
+
+        target.setEnabled(true);
         userRepository.save(target);
     }
 }

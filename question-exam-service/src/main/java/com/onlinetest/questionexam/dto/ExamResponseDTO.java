@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import java.util.List;
 
 import java.time.LocalDateTime;
 
@@ -17,13 +18,12 @@ public class ExamResponseDTO {
     private String title;
     private String description;
     private Integer totalQuestions;
-
-    private Integer durationMinutes;
-    private Integer perQuestionSeconds;   
-    private Integer reviewMinutes;        
+    private Integer perQuestionSeconds;   // NEW
+    private Integer reviewMinutes;        // NEW
 
     private Integer passingPercentage;
     private Integer selectedTopicCount;
+    private List<ExamTopicSummaryDTO> selectedTopics;
     private LocalDateTime createdDate;
     private LocalDateTime updatedDate;
     private Long updatedBy;

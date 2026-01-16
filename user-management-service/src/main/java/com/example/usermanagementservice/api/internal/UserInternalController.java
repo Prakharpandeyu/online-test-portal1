@@ -20,6 +20,13 @@ public class UserInternalController {
         var user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
+        // ---------------------------------
+        // NEW: BLOCK DISABLED USERS
+        // ---------------------------------
+        if (!user.isEnabled()) {
+            throw new RuntimeException("User account is disabled");
+        }
+
         Long companyId =
                 user.getCompany() != null ? user.getCompany().getId() : null;
 

@@ -1,5 +1,4 @@
 package com.example.auth.service;
-
 import com.example.auth.api.dto.AuthResponse;
 import com.example.auth.api.dto.LoginRequest;
 import com.example.auth.integration.UserClient;
