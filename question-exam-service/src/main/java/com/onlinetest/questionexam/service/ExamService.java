@@ -194,51 +194,7 @@ public class ExamService {
                 .toList();
     }
 
-    // =========================
-    // Search + Pagination
-    // =========================
-    @Transactional(readOnly = true)
-    public PaginatedResponseDTO<ExamResponseDTO> searchExams(Long companyId, String search, int page) {
-
-        int pageSize = 5;
-        Pageable pageable = PageRequest.of(page, pageSize);
-
-        Page<Exam> examPage;
-
-        if (search != null && !search.trim().isEmpty()) {
-            examPage = examRepository.findByCompanyIdAndTitleContainingIgnoreCase(
-                    companyId,
-                    search.trim(),
-                    pageable
-            );
-        } else {
-            examPage = examRepository.findByCompanyId(companyId, pageable);
-        }
-
-        List<ExamResponseDTO> content = examPage.getContent().stream()
-                .map(e -> {
-                    List<ExamTopicSummaryDTO> topics = deriveSelectedTopics(e.getId());
-                    return mapToResponseDTO(e, topics.size(), topics);
-                })
-                .toList();
-
-        return PaginatedResponseDTO.<ExamResponseDTO>builder()
-                .content(content)
-                .currentPage(examPage.getNumber())
-                .pageSize(pageSize)
-                .totalPages(examPage.getTotalPages())
-                .totalElements(examPage.getTotalElements())
-                .hasNext(examPage.hasNext())
-                .hasPrevious(examPage.hasPrevious())
-                .build();
-    }
-
-    // =========================
-    // Update Exam
-    // =========================
-    public ExamResponseDTO updateExam(Long examId, ExamCreateRequestDTO req,
-                                      Long companyId, Long userId, String role) {
-
+    public ExamResponseDTO updateExam(Long examId, ExamCreateRequestDTO req, Long companyId, Long userId, String role) {
         Exam exam = examRepository.findById(examId)
                 .orElseThrow(() -> new RuntimeException("Exam not found: " + examId));
 
@@ -264,9 +220,7 @@ public class ExamService {
         return mapToResponseDTO(exam, topics.size(), topics);
     }
 
-    // =========================
-    // Delete Exam
-    // =========================
+
     public void deleteExam(Long examId, Long companyId) {
 
         Exam exam = examRepository.findById(examId)
@@ -279,41 +233,7 @@ public class ExamService {
         examQuestionRepository.deleteByExamId(examId);
         examRepository.delete(exam);
     }
-
-    // =========================
-    // Helpers
-    // =========================
-    private List<ExamTopicSummaryDTO> deriveSelectedTopics(Long examId) {
-
-        List<ExamQuestion> examQuestions =
-                examQuestionRepository.findByExamIdOrderByPositionAsc(examId);
-
-        List<Question> questions = questionRepository.findAllById(
-                examQuestions.stream()
-                        .map(ExamQuestion::getQuestionId)
-                        .toList()
-        );
-
-        return questions.stream()
-                .collect(Collectors.groupingBy(Question::getTopicId))
-                .entrySet()
-                .stream()
-                .map(entry -> {
-                    Question q = entry.getValue().get(0);
-                    return new ExamTopicSummaryDTO(
-                            entry.getKey(),
-                            q.getTopic() != null ? q.getTopic().getName() : "Unknown",
-                            entry.getValue().size()
-                    );
-                })
-                .toList();
-    }
-
-    private ExamResponseDTO mapToResponseDTO(
-            Exam exam,
-            Integer topicCount,
-            List<ExamTopicSummaryDTO> selectedTopics
-    ) {
+    private ExamResponseDTO mapToResponseDTO(Exam exam, Integer topicCount) {
         return ExamResponseDTO.builder()
                 .id(exam.getId())
                 .companyId(exam.getCompanyId())

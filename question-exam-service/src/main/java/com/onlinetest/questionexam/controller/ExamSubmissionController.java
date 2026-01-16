@@ -26,7 +26,6 @@ public class ExamSubmissionController {
     ) {
         Long companyId = SecurityContextUtil.getCompanyId();
         Long employeeId = SecurityContextUtil.getUserId();
-        // Ensure path and body alignment
         if (!examId.equals(req.getExamId())) {
             return ResponseEntity.badRequest().body(ApiResponseDTO.error("Mismatched examId"));
         }

@@ -34,7 +34,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         String header = request.getHeader(HttpHeaders.AUTHORIZATION);
 
-        // No token → continue (public or handled later)
         if (!StringUtils.hasText(header) || !header.startsWith("Bearer ")) {
             chain.doFilter(request, response);
             return;
@@ -43,14 +42,11 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         String token = header.substring(7);
 
         try {
-            // Validate token
             if (!jwtUtil.validateToken(token)) {
                 log.error("Invalid JWT token");
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 return;
             }
-
-            // Extract required claims
             Long userId = jwtUtil.extractUserId(token);
             Long companyId = jwtUtil.extractCompanyId(token);
             String username = jwtUtil.extractUsername(token);
@@ -66,8 +62,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                             null,
                             authorities
                     );
-
-            // ✅ ALWAYS set details
             auth.setDetails(Map.of(
                     "userId", userId,
                     "companyId", companyId

@@ -34,8 +34,6 @@ public class ExamAssignmentService {
     private final ExamAssignmentRepository examAssignmentRepository;
     private final ExamQuestionRepository examQuestionRepository;
     private final QuestionRepository questionRepository;
-
-    // REQUIRED: Used to fetch last attempt results
     private final ExamAttemptRepository attemptRepository;
 
     private final UserClient userClient;

@@ -7,9 +7,6 @@ import lombok.NoArgsConstructor;
 
 import java.util.List;
 
-/**
- * Simple pagination response with only necessary fields
- */
 @Data
 @Builder
 @NoArgsConstructor

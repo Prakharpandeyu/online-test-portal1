@@ -195,7 +195,6 @@ public class QuestionService {
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
     }
-
     @Transactional(readOnly = true)
     public Page<QuestionResponseDTO> getQuestionsByTopicPaginated(
             Long topicId,

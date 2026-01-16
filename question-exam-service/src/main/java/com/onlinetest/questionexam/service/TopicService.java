@@ -26,8 +26,6 @@ public class TopicService  {
     public TopicResponseDTO createTopic(TopicRequestDTO requestDTO, Long companyId, Long userId, String role) {
         log.info("Creating topic: {} for company: {} by user: {} with role: {}",
                 requestDTO.getName(), companyId, userId, role);
-
-        // Check if topic name already exists
         if (topicRepository.existsByNameAndCompanyId(requestDTO.getName(), companyId)) {
             throw new RuntimeException("Topic with name '" + requestDTO.getName() + "' already exists");
         }
@@ -82,8 +80,6 @@ public class TopicService  {
                 topicRepository.existsByNameAndCompanyId(requestDTO.getName(), companyId)) {
             throw new RuntimeException("Topic with name '" + requestDTO.getName() + "' already exists");
         }
-
-        // Update topic
         topic.setName(requestDTO.getName());
         topic.setDescription(requestDTO.getDescription());
 

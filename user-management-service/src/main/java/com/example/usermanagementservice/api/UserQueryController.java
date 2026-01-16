@@ -25,9 +25,6 @@ public class UserQueryController {
 
     private final UserRepository userRepository;
 
-    // ---------------------------------
-    // USERS OF MY COMPANY (NON PAGINATED)
-    // ---------------------------------
     @GetMapping("/company/me")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")
     public ResponseEntity<List<UserSummaryDTO>> getUsersForMyCompany(Authentication auth) {
@@ -41,10 +38,6 @@ public class UserQueryController {
 
         return ResponseEntity.ok(dtos);
     }
-
-    // ---------------------------------
-    // USERS OF MY COMPANY (PAGINATED + SEARCH + FILTER)
-    // ---------------------------------
     @GetMapping("/company/me/paged")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")
     public ResponseEntity<Page<UserSummaryDTO>> getUsersForMyCompanyPaged(
@@ -70,9 +63,7 @@ public class UserQueryController {
         return ResponseEntity.ok(result);
     }
 
-    // ---------------------------------
-    // EMPLOYEES OF MY COMPANY
-    // ---------------------------------
+
     @GetMapping("/employees/company/me")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")
     public ResponseEntity<List<UserSummaryDTO>> getEmployeesForMyCompany(Authentication auth) {
@@ -92,9 +83,6 @@ public class UserQueryController {
         return ResponseEntity.ok(dtos);
     }
 
-    // ---------------------------------
-    // GET USER DETAILS (ADMIN DASHBOARD)
-    // ---------------------------------
     @GetMapping("/{userId}")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")
     public ResponseEntity<UserProfileResponse> getUserById(
@@ -141,9 +129,6 @@ public class UserQueryController {
         return ResponseEntity.ok(dto);
     }
 
-    // ---------------------------------
-    // HELPERS
-    // ---------------------------------
     private UserSummaryDTO toSummary(User u) {
         return new UserSummaryDTO(
                 u.getId(),

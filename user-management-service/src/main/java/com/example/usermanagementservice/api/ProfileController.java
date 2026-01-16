@@ -30,10 +30,6 @@ public class ProfileController {
     private final UserService userService;
     private final CompanyService companyService;
     private final CompanyRepository companyRepository;
-
-    // ---------------------------
-    // GET MY PROFILE
-    // ---------------------------
     @GetMapping("/me")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','EMPLOYEE')")
     public ResponseEntity<UserProfileResponse> getMyProfile(Authentication auth) {
@@ -66,9 +62,6 @@ public class ProfileController {
         return ResponseEntity.ok(response);
     }
 
-    // ---------------------------
-    // UPDATE MY PROFILE
-    // ---------------------------
     @PatchMapping("/me")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','EMPLOYEE')")
     public ResponseEntity<?> updateMyProfile(
@@ -85,10 +78,6 @@ public class ProfileController {
                 "userId", updated.getId()
         ));
     }
-
-    // ---------------------------
-    // CHANGE PASSWORD
-    // ---------------------------
     @PatchMapping("/password")
     @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','EMPLOYEE')")
     public ResponseEntity<?> changeMyPassword(
@@ -107,9 +96,6 @@ public class ProfileController {
         return ResponseEntity.ok(Map.of("message", "Password changed"));
     }
 
-    // ---------------------------
-    // UPDATE COMPANY (SUPER ADMIN)
-    // ---------------------------
     @PatchMapping("/company")
     @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<?> updateMyCompany(
@@ -138,10 +124,6 @@ public class ProfileController {
                 "companyId", companyId
         ));
     }
-
-    // ==================================================
-    // SAFE AUTH EXTRACTION (THIS FIXES YOUR 400 ERROR)
-    // ==================================================
 
     private Long extractUserId(Authentication auth) {
         Map<String, Object> details = extractDetails(auth);

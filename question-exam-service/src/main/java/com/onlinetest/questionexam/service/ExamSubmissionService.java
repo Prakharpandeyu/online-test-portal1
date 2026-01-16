@@ -155,7 +155,6 @@ public class ExamSubmissionService {
         boolean passed = percentage >= passingThreshold;
 
         int nextAttemptNum = attemptsUsed + 1;
-
         ExamAttempt attempt = new ExamAttempt();
         attempt.setCompanyId(companyId);
         attempt.setExamId(exam.getId());
@@ -175,11 +174,7 @@ public class ExamSubmissionService {
         }
         attemptAnswerRepository.saveAll(persistedAnswers);
 
-        a.setAttemptsUsed(nextAttemptNum);
-        a.setLastResult(passed ? "PASSED" : "FAILED");
-        a.setLastPercentage(percentage);
-        a.setLastSubmittedAt(now);
-
+        setAttemptsUsed(a, nextAttemptNum);
         if (passed) {
             a.setStatus(STATUS_COMPLETED);
         } else {

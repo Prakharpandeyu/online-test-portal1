@@ -37,11 +37,10 @@ public class Exam {
     @Column(name = "passing_percentage")
     private Integer passingPercentage;
 
-    // NEW: per-question timer (seconds)
+    
     @Column(name = "per_question_seconds", nullable = false)
     private Integer perQuestionSeconds;
 
-    // NEW: review timer (minutes)
     @Column(name = "review_minutes", nullable = false)
     private Integer reviewMinutes;
 

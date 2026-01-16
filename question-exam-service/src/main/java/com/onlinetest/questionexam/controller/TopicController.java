@@ -28,8 +28,6 @@ public class TopicController {
 
     private final TopicService topicService;
     private final JWTUtil jwtUtil;
-
-   //create new topic only super admin/admin
     @PostMapping
     public ResponseEntity<ApiResponseDTO<TopicResponseDTO>> createTopic(
             @Valid @RequestBody TopicRequestDTO requestDTO,

@@ -20,7 +20,7 @@ public class CorsGlobalConfig {
 
         cors.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         cors.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept", "*"));
-        cors.setExposedHeaders(List.of("*")); // important for Authorization header
+        cors.setExposedHeaders(List.of("*")); 
 
         cors.setMaxAge(3600L);
 
