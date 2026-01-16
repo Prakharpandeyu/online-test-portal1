@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+    paths:
+      - authservice/**
+      - .github/workflows/main.yml
 
 jobs:
   build-and-push:
@@ -19,7 +22,8 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Build with Maven
+      - name: Build authservice with Maven
+        working-directory: authservice
         run: mvn clean package -DskipTests
 
       - name: Login to Docker Hub
@@ -29,7 +33,11 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build Docker image
-        run: docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/authservice:latest .
+        run: |
+          docker build \
+            -t ${{ secrets.DOCKERHUB_USERNAME }}/authservice:latest \
+            ./authservice
 
       - name: Push Docker image
-        run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/authservice:latest
+        run: |
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/authservice:latest
